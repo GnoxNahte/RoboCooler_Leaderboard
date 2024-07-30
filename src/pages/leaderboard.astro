@@ -1,0 +1,79 @@
+---
+
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Leaderboard</title>
+	</head>
+	<body>
+        <h1>Leaderboard</h1>
+        <p class="loading-text">Loading...</p>
+        <ol id="data-list">
+            <!-- DATA -->
+        </ol>
+	</body>
+</html>
+
+<style>
+    .loading-text:has(~ ol#data-list li) {
+        display: none;
+    }
+</style>
+
+<script>
+import type { CurrPlayerData, PlayerLeaderboardEntry } from "../types/LootLockerTypes";
+
+
+    const loadingText = document.getElementById("loading-text");
+    const dataList = document.getElementById("data-list");
+
+    InitSession().then((playerData) => {
+        LoadData(playerData);
+    });
+
+    function InitSession() {
+        return fetch("https://api.lootlocker.io/game/v2/session/guest", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: "{\"game_key\": \"dev_82d76006f31e4cb787b807d9640a5166\", \"game_version\": \"0.10.0.0\"}",
+        }).then((response) => {
+            return response.json();
+        }).then((data) => {
+            if (data.success)
+                console.log("Guest session started successfully");
+            else
+                console.log("Failed to start guest session");
+            return data as CurrPlayerData;
+        })
+    }
+
+    function LoadData(data: CurrPlayerData) {
+        console.log("Data: " + JSON.stringify(data));
+        console.log("Session token: " + data.session_token);
+        return fetch("https://api.lootlocker.io/game/leaderboards/level_1_times/list?count=2000", {
+            method: "GET",
+            headers: {"x-session-token": data.session_token}
+            
+        }).then((response) => {
+            return response.json();
+        }).then((data) => {
+            console.log("DATa: " + JSON.stringify(data));
+            const entries = data.items as PlayerLeaderboardEntry[];
+            entries.forEach(entry => {
+                const entryLi = document.createElement("li");
+                const time = entry.score;
+                const timeMin = time % 60;
+                const timeSec = (time / 60).toString().substring(0, 2);
+                const timeMili = (time % 1) * 1000;
+                entryLi.textContent = `${entry.player.name} - ${timeMin}:${timeSec}:${timeMili}`;
+                dataList?.appendChild(entryLi);
+            });
+        })
+    }
+
+</script>
