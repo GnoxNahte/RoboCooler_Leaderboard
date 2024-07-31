@@ -1,0 +1,166 @@
+---
+import { Image } from "astro:assets";
+import "../../styles/global.css";
+import Background from "../../images/background.gif";
+
+export function getStaticPaths() {
+  return [
+    {params: {type: 'total_time'}},
+    {params: {type: 'level_1_times'}},
+    {params: {type: 'level_2_times'}},
+    {params: {type: 'level_3_times'}},
+  ];
+}
+
+const { type } = Astro.params;
+
+// Not very good since malicious actors can inspect and see the code, but 
+// First time doing env variables,
+// Think setting up a server with some provider like Vercel is the only way to make it secure?
+// As far as I know this is the only quick way to do it
+// This is just a quick website for a very small community (3 days of playing the game)
+// At least it isn't in the public GitHub repo
+const key = import.meta.env.GAME_KEY;
+
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Leaderboard</title>
+	</head>
+	<body>
+        <Image src={Background} alt="Background Image" class:list="background"/>
+        <h1>Robo Cooler Leaderboards</h1>
+        <nav>
+            <a href="/RoboCooler_Leaderboard/leaderboards/total_time">Total time</a>
+            <a href="/RoboCooler_Leaderboard/leaderboards/level_1_times">Level 1 time</a>
+            <a href="/RoboCooler_Leaderboard/leaderboards/level_2_times">Level 2 time</a>
+            <a href="/RoboCooler_Leaderboard/leaderboards/level_3_times">Level 3 time</a>
+        </nav>
+        <p class="loading-text">Loading...</p>
+        <!-- <div>{data.player_id}</div> -->
+        <ol id="data-list" data-game-key={key} data-type={type}>
+            
+        </ol>
+	</body>
+</html>
+
+<style>
+    body {
+        padding: 1em;
+    }
+    .loading-text:has(~ ol#data-list li) {
+        display: none;
+    }
+
+    .background {
+        width: 100%;
+        height: calc(100% - 10px);
+        opacity: 50%;
+        filter: blur(10px);
+        background-color: #ec9294;
+        object-fit: contain;
+        position: absolute;
+        z-index: -1;
+        user-select: none;
+    }
+
+    nav {
+        display: flex;
+        gap: 1em;
+        /* align-content: center; */
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    h1 {
+        text-align: center;
+    }
+    .loading-text {
+        text-align: center;
+    }
+    #data-list {
+        max-width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+        display: flex;
+        flex-direction: column;
+        /* margin: 10px; */
+        /* padding: 10px; */
+        align-content: center;
+        justify-content: center;
+        /* text-align: center; */
+    }
+</style>
+
+<script>
+import type { PlayerLeaderboardEntry, CurrPlayerData } from "../../types/LootLockerTypes";
+
+const dataListEl = document.getElementById("data-list");
+const key = dataListEl?.dataset.gameKey;
+const leaderboardType = dataListEl?.dataset.type;
+// const testKey = document.createElement("li");
+// dataListEl?.appendChild()
+console.log("Key: " + key);
+
+InitSession().then((playerData) => {
+    return LoadLeaderboardData(playerData);
+}).then((leaderboardData) => {
+    leaderboardData.forEach((data) => {
+        const liElement = document.createElement("li");
+        liElement.textContent = `${data.player.name} - ${ConvertScoreToTime(data.score)} - ${data.score} - ${data.player.public_uid}`;
+        dataListEl?.appendChild(liElement);
+    })
+});
+
+function InitSession() {
+    return fetch("https://api.lootlocker.io/game/v2/session/guest", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: "{\"game_key\": \"" + key + "\", \"game_version\": \"0.10.0.0\"}",
+    }).then((response) => {
+        return response.json();
+    }).then((data) => {
+        if (data.success)
+            console.log("Guest session started successfully");
+        else
+            console.log("Failed to start guest session");
+        return data as CurrPlayerData;
+    })
+}
+
+function LoadLeaderboardData(data: CurrPlayerData) {
+    console.log("Data: " + JSON.stringify(data));
+    console.log("Session token: " + data.session_token);
+    return fetch(`https://api.lootlocker.io/game/leaderboards/${leaderboardType}/list?count=2000`, {
+        method: "GET",
+        headers: {"x-session-token": data.session_token}
+    }).then((response) => {
+        return response.json();
+    }).then((data) => {
+        console.log("DATa: " + JSON.stringify(data));
+        
+        return  data.items as PlayerLeaderboardEntry[];
+    })
+}
+
+function ConvertScoreToTime(score: number) {
+    const time = score / 1000;
+    const timeMin = Math.trunc(time / 60);
+    const timeSec = ForceStringDecimalPalce(Math.trunc(time % 60), 2);
+    const timeMili = ForceStringDecimalPalce(Math.trunc((time % 1) * 1000), 3);
+    return `${timeMin}:${timeSec}:${timeMili}`;
+}
+
+function ForceStringDecimalPalce(num: number, decimalPlaces: number) {
+    let result = num.toString();
+    while (result.length < decimalPlaces) {
+        result = '0' + result;
+    }
+    return result;
+}
+</script>

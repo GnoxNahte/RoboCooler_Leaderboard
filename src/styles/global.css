@@ -1,0 +1,24 @@
+@font-face {
+  font-family: 'Retro Gaming';
+  src: url('../../public/fonts/Retro Gaming.ttf');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+html {
+  --background-color: #ec9294;
+}
+html {
+  font-family: 'Retro Gaming';
+  background-color: var(--background-color);
+}
+html, body {
+  padding: 0;
+  padding-top: 1px;
+  margin: 0 !important;
+  /* margin-top: 0; */
+}
+body {
+}
