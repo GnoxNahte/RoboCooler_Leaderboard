@@ -20,7 +20,9 @@ const { type } = Astro.params;
 // As far as I know this is the only quick way to do it
 // This is just a quick website for a very small community (3 days of playing the game)
 // At least it isn't in the public GitHub repo
-const key = import.meta.env.GAME_KEY;
+let key = import.meta.env.GAME_KEY;
+if (!key)
+    key = "dev_82d76006f31e4cb787b807d9640a5166";
 
 ---
 
