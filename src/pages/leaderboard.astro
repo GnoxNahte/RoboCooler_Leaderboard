@@ -13,8 +13,9 @@
 	<body>
         <h1>Leaderboard</h1>
         <p class="loading-text">Loading...</p>
+        <!-- <div>{data.player_id}</div> -->
         <ol id="data-list">
-            <!-- DATA -->
+            
         </ol>
 	</body>
 </html>
@@ -26,54 +27,56 @@
 </style>
 
 <script>
-import type { CurrPlayerData, PlayerLeaderboardEntry } from "../types/LootLockerTypes";
+import type { PlayerLeaderboardEntry, CurrPlayerData } from "../types/LootLockerTypes";
 
+const dataListEl = document.getElementById("data-list");
 
-    const loadingText = document.getElementById("loading-text");
-    const dataList = document.getElementById("data-list");
+InitSession().then((playerData) => {
+    return LoadLeaderboardData(playerData);
+}).then((leaderboardData) => {
+    leaderboardData.forEach((data) => {
+        const liElement = document.createElement("li");
+        liElement.textContent = `${data.player.name} - ${ConvertScoreToTime(data.score)}`;
+        dataListEl?.appendChild(liElement);
+    })
+});
 
-    InitSession().then((playerData) => {
-        LoadData(playerData);
-    });
+function InitSession() {
+    return fetch("https://api.lootlocker.io/game/v2/session/guest", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: "{\"game_key\": \"dev_82d76006f31e4cb787b807d9640a5166\", \"game_version\": \"0.10.0.0\"}",
+    }).then((response) => {
+        return response.json();
+    }).then((data) => {
+        if (data.success)
+            console.log("Guest session started successfully");
+        else
+            console.log("Failed to start guest session");
+        return data as CurrPlayerData;
+    })
+}
 
-    function InitSession() {
-        return fetch("https://api.lootlocker.io/game/v2/session/guest", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: "{\"game_key\": \"dev_82d76006f31e4cb787b807d9640a5166\", \"game_version\": \"0.10.0.0\"}",
-        }).then((response) => {
-            return response.json();
-        }).then((data) => {
-            if (data.success)
-                console.log("Guest session started successfully");
-            else
-                console.log("Failed to start guest session");
-            return data as CurrPlayerData;
-        })
-    }
+function LoadLeaderboardData(data: CurrPlayerData) {
+    console.log("Data: " + JSON.stringify(data));
+    console.log("Session token: " + data.session_token);
+    return fetch("https://api.lootlocker.io/game/leaderboards/level_1_times/list?count=2000", {
+        method: "GET",
+        headers: {"x-session-token": data.session_token}
+    }).then((response) => {
+        return response.json();
+    }).then((data) => {
+        console.log("DATa: " + JSON.stringify(data));
+        
+        return  data.items as PlayerLeaderboardEntry[];
+    })
+}
 
-    function LoadData(data: CurrPlayerData) {
-        console.log("Data: " + JSON.stringify(data));
-        console.log("Session token: " + data.session_token);
-        return fetch("https://api.lootlocker.io/game/leaderboards/level_1_times/list?count=2000", {
-            method: "GET",
-            headers: {"x-session-token": data.session_token}
-            
-        }).then((response) => {
-            return response.json();
-        }).then((data) => {
-            console.log("DATa: " + JSON.stringify(data));
-            const entries = data.items as PlayerLeaderboardEntry[];
-            entries.forEach(entry => {
-                const entryLi = document.createElement("li");
-                const time = entry.score;
-                const timeMin = time % 60;
-                const timeSec = (time / 60).toString().substring(0, 2);
-                const timeMili = (time % 1) * 1000;
-                entryLi.textContent = `${entry.player.name} - ${timeMin}:${timeSec}:${timeMili}`;
-                dataList?.appendChild(entryLi);
-            });
-        })
-    }
-
+function ConvertScoreToTime(score: number) {
+    const time = score;
+    const timeMin = time % 60;
+    const timeSec = (time / 60).toString().substring(0, 2);
+    const timeMili = (time % 1) * 1000;
+    return `${timeMin}:${timeSec}:${timeMili}`;
+}
 </script>
