@@ -114,7 +114,7 @@ InitSession().then((playerData) => {
 }).then((leaderboardData) => {
     leaderboardData.forEach((data) => {
         const liElement = document.createElement("li");
-        liElement.textContent = `${data.player.name} - ${ConvertScoreToTime(data.score)} - ${data.score} - ${data.player.public_uid}`;
+        liElement.textContent = `${data.player.name} - ${ConvertScoreToTime(data.score)}`;
         dataListEl?.appendChild(liElement);
     })
 });
